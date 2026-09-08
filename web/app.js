@@ -168,12 +168,9 @@ async function loadRoots(data = null) {
   renderVariation();
 }
 async function refresh(expectedId) {
-  const [summary, roots] = await Promise.all([
-    request(filteredUrl('/api/summary')),
-    request(filteredUrl('/api/roots')),
-  ]);
+  const roots = await request(filteredUrl('/api/roots'));
   if (expectedId !== refreshId) return;
-  summaryElement.textContent = `${summary.games} games - last updated ${formatUpdated(summary.last_updated)}`;
+  summaryElement.textContent = `${roots.summary.games} games - last updated ${formatUpdated(roots.summary.last_updated)}`;
   await loadRoots(roots);
 }
 function refreshFilters() {

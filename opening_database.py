@@ -610,6 +610,21 @@ class OpeningDatabase:
         return [{"hash": row["hash"], "games": row["games"], "board": json.loads(row["board_json"]),
                  "side": row["side"]} for row in rows]
 
+    def header_summary(self, player: str | None = None, color: str | None = None,
+                       game_type: str | None = None, date_from: str | None = None,
+                       date_to: str | None = None, rating_min: float | None = None,
+                       rating_max: float | None = None,
+                       rating_bands: tuple[str, ...] | None = None) -> dict[str, Any]:
+        """Small summary for the latency-sensitive initial page load."""
+        clause, params = self._filter_clause(player, color, game_type, date_from, date_to,
+                                             rating_min, rating_max, rating_bands)
+        played_clause = clause.replace(" WHERE ", " WHERE g.ply_count > 0 AND ") if clause else " WHERE g.ply_count > 0"
+        row = self.connection.execute(
+            f"SELECT COUNT(*) AS games, MAX(g.imported_at) AS last_updated FROM games AS g {played_clause}",
+            params,
+        ).fetchone()
+        return dict(row)
+
     def opening(self, position: str, limit: int = 30, player: str | None = None,
                 color: str | None = None, game_type: str | None = None, date_from: str | None = None,
                 date_to: str | None = None, rating_min: float | None = None,

@@ -57,8 +57,9 @@ def _rating_bands(value: str) -> tuple[str, ...] | None:
 def execute_request(database: OpeningDatabase, endpoint: str,
                     query: dict[str, list[str]]) -> dict[str, Any]:
     if endpoint == "health":
-        database.connection.execute("SELECT 1").fetchone()
-        return {"status": "ok", "database": "turso" if database.remote else "sqlite"}
+        row = database.connection.execute("SELECT COUNT(*) AS games FROM games").fetchone()
+        return {"status": "ok", "database": "turso" if database.remote else "sqlite",
+                "games": row["games"]}
 
     player = query.get("player", [""])[0]
     color = query.get("color", [""])[0]
@@ -74,7 +75,8 @@ def execute_request(database: OpeningDatabase, endpoint: str,
         return database.summary(player, color, **filters)
     if endpoint == "roots":
         limit = _positive_int(query.get("limit", ["20"])[0], 20, 100)
-        return {"roots": database.roots(limit, player, color, **filters)}
+        return {"roots": database.roots(limit, player, color, **filters),
+                "summary": database.header_summary(player, color, **filters)}
     if endpoint == "opening":
         position = query.get("position", [""])[0]
         limit = _positive_int(query.get("limit", ["30"])[0], 30, 100)
