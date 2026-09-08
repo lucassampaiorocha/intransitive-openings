@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import math
+import os
+import sys
+import traceback
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler
 from pathlib import Path
@@ -119,8 +122,19 @@ class VercelOpeningHandler(SimpleHTTPRequestHandler):
         except KeyError as error:
             self._write_json({"error": str(error)}, HTTPStatus.NOT_FOUND)
         except Exception as error:
-            print(f"[openings-api] {type(error).__name__}: {error}")
-            self._write_json({"error": "Database request failed"}, HTTPStatus.INTERNAL_SERVER_ERROR)
+            print(f"[openings-api] endpoint={self.endpoint} {type(error).__name__}: {error}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            if self.endpoint == "health":
+                message = str(error) if isinstance(error, RuntimeError) else "Connection test failed; see Vercel Runtime Logs."
+                self._write_json({
+                    "status": "error",
+                    "error": type(error).__name__,
+                    "message": message,
+                    "turso_url_configured": bool(os.environ.get("TURSO_DATABASE_URL")),
+                    "turso_token_configured": bool(os.environ.get("TURSO_AUTH_TOKEN")),
+                }, HTTPStatus.INTERNAL_SERVER_ERROR)
+            else:
+                self._write_json({"error": "Database request failed"}, HTTPStatus.INTERNAL_SERVER_ERROR)
         finally:
             if database is not None:
                 database.close()

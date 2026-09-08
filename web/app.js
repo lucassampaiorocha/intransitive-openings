@@ -33,8 +33,10 @@ function request(url) {
     return cached;
   }
   const pending = fetch(url).then(async response => {
-    const data = await response.json();
-    if (!response.ok) throw new Error('Request failed.');
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json') ? await response.json() : null;
+    if (!response.ok) throw new Error(data?.message || data?.error || `Request failed (${response.status}).`);
+    if (!data) throw new Error('API returned an invalid response.');
     return data;
   });
   requestCache.set(url, pending);
@@ -181,6 +183,13 @@ function refreshFilters() {
     if (expectedId === refreshId) configLoadingElement.hidden = true;
   });
 }
+function showLoadError(error) {
+  console.error(error);
+  summaryElement.textContent = 'Database unavailable';
+  movesElement.textContent = error.message || 'Could not load openings.';
+  boardElement.innerHTML = '';
+  configLoadingElement.hidden = true;
+}
 function parseDisplayDate(input) {
   const value = input.value.trim();
   input.setCustomValidity('');
@@ -237,4 +246,4 @@ document.querySelectorAll('.rating-option').forEach(button => {
 document.querySelector('#game-type').value = '';
 flipButton.onclick = () => { flipped = !flipped; if (displayedBoard) renderBoard(displayedBoard); };
 backButton.onclick = () => { variation.pop(); loadOpening(path.pop()); };
-refresh(++refreshId).catch(() => {});
+refresh(++refreshId).catch(showLoadError);
