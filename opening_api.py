@@ -5,12 +5,15 @@ from __future__ import annotations
 import json
 import math
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from opening_database import OpeningDatabase
 
+
+WEB_ROOT = Path(__file__).parent / "web"
 
 def _positive_int(value: str, default: int, maximum: int) -> int:
     try:
@@ -76,10 +79,13 @@ def execute_request(database: OpeningDatabase, endpoint: str,
     raise KeyError("Endpoint not found")
 
 
-class VercelOpeningHandler(BaseHTTPRequestHandler):
+class VercelOpeningHandler(SimpleHTTPRequestHandler):
     """Base class for the small endpoint files under api/."""
 
     endpoint = ""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(WEB_ROOT), **kwargs)
 
     def _write_json(self, data: object, status: HTTPStatus = HTTPStatus.OK) -> None:
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")
@@ -92,9 +98,21 @@ class VercelOpeningHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
+        parsed = urlparse(self.path)
+        self.endpoint = self.endpoint or {
+            "/api/health": "health",
+            "/api/summary": "summary",
+            "/api/roots": "roots",
+            "/api/opening": "opening",
+        }.get(parsed.path.rstrip("/"), "")
+        if not self.endpoint:
+            if parsed.path in {"", "/"}:
+                self.path = "/index.html"
+            super().do_GET()
+            return
         database = None
         try:
-            query = parse_qs(urlparse(self.path).query)
+            query = parse_qs(parsed.query)
             database = OpeningDatabase.from_turso()
             data = execute_request(database, self.endpoint, query)
             self._write_json(data)

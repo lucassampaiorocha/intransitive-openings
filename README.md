@@ -5,7 +5,7 @@ Independent community opening explorer for Intransitive/RPS2.
 ## Architecture
 
 - `web/`: static frontend and its own SVG assets.
-- `api/`: read-only Vercel Functions.
+- `api/index.py`: single read-only Vercel Python entrypoint and API router.
 - `opening_api.py`: shared endpoint and request logic.
 - `opening_database.py`: local SQLite and remote Turso data access.
 - `opening_crawl.py`: incremental public game crawler.
@@ -14,7 +14,7 @@ Independent community opening explorer for Intransitive/RPS2.
 - `data/`: local SQLite location; database files are excluded from Git.
 
 Production uses Vercel for the frontend and API, Turso for persistent data, and a
-scheduled GitHub Action for the crawler. API and crawler tokens are separate.
+manually triggered GitHub Action for the crawler. API and crawler tokens are separate.
 
 ## Local development
 

@@ -1,6 +1,6 @@
 # Turso and Vercel publication
 
-Production consists of one Vercel project, one Turso database and one scheduled
+Production consists of one Vercel project, one Turso database and one manual
 GitHub Actions workflow. No VM, reverse proxy or public API domain is required.
 
 ## 1. Prepare the existing SQLite database
@@ -53,15 +53,15 @@ In the GitHub repository, create Actions secrets:
 - `TURSO_DATABASE_URL`: URL printed by `turso db show`.
 - `TURSO_WRITE_TOKEN`: full-access crawler token.
 
-The workflow `.github/workflows/openings-crawler.yml` runs hourly and can also be
-started manually. It first checks existing game IDs in one query per page, avoiding
-repeated game-history downloads.
+The workflow `.github/workflows/openings-crawler.yml` only runs when started with
+GitHub's `Run workflow` button. It first checks existing game IDs in one query per
+page, avoiding repeated game-history downloads.
 
 ## 5. Configure and deploy Vercel
 
 Import the Git repository in Vercel and set Root Directory to `apps/openings`.
-Use Framework Preset `Other`; `vercel.json` publishes `web/` and detects the Python
-functions under `api/`.
+Use Framework Preset `Other`; `vercel.json` publishes `web/`, while `pyproject.toml`
+declares `api.index:handler` as the single Python entrypoint.
 
 Create these Vercel environment variables for Production, Preview and Development:
 

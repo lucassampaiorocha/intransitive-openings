@@ -1,0 +1,10 @@
+[project]
+name = "intransitive-openings"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "turso-serverless==0.1.0",
+]
+
+[tool.vercel]
+entrypoint = "api.index:handler"

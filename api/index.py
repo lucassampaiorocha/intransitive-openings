@@ -2,4 +2,5 @@ from opening_api import VercelOpeningHandler
 
 
 class handler(VercelOpeningHandler):
-    endpoint = "summary"
+    """Single Vercel Python entrypoint with internal API routing."""
+    pass

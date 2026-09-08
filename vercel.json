@@ -2,9 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "web",
   "functions": {
-    "api/**/*.py": {
+    "api/index.py": {
       "maxDuration": 30,
-      "excludeFiles": "{data/**,test_*.py,web/**,**/__pycache__/**,**/*.sqlite3*}"
+      "excludeFiles": "{data/**,test_*.py,**/__pycache__/**,**/*.sqlite3*}"
     }
   }
 }

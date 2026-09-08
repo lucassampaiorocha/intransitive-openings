@@ -1,0 +1,31 @@
+name: Update opening database manually
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: openings-crawler
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/openings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: apps/openings/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - run: python opening_crawl.py --pages 25 --delay .4
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_WRITE_TOKEN }}
