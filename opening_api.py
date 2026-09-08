@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from opening_book import OpeningBookDatabase
 from opening_database import OpeningDatabase
 
 
@@ -54,12 +55,26 @@ def _rating_bands(value: str) -> tuple[str, ...] | None:
     return tuple(band for band in value.split(",") if band in allowed)
 
 
-def execute_request(database: OpeningDatabase, endpoint: str,
+def execute_request(database: OpeningDatabase | OpeningBookDatabase, endpoint: str,
                     query: dict[str, list[str]]) -> dict[str, Any]:
     if endpoint == "health":
+        if isinstance(database, OpeningBookDatabase):
+            return database.health()
         row = database.connection.execute("SELECT COUNT(*) AS games FROM games").fetchone()
         return {"status": "ok", "database": "turso" if database.remote else "sqlite",
                 "games": row["games"]}
+
+    if isinstance(database, OpeningBookDatabase):
+        if endpoint == "summary":
+            return database.summary()
+        if endpoint == "roots":
+            limit = _positive_int(query.get("limit", ["20"])[0], 20, 100)
+            return {"roots": database.roots(limit), "summary": database.summary()}
+        if endpoint == "opening":
+            position = query.get("position", [""])[0]
+            limit = _positive_int(query.get("limit", ["30"])[0], 30, 100)
+            return database.opening(position, limit)
+        raise KeyError("Endpoint not found")
 
     player = query.get("player", [""])[0]
     color = query.get("color", [""])[0]
@@ -118,7 +133,7 @@ class VercelOpeningHandler(SimpleHTTPRequestHandler):
         database = None
         try:
             query = parse_qs(parsed.query)
-            database = OpeningDatabase.from_turso()
+            database = OpeningBookDatabase.from_turso()
             data = execute_request(database, self.endpoint, query)
             self._write_json(data)
         except KeyError as error:

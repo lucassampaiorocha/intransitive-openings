@@ -1,20 +1,20 @@
 # Turso and Vercel publication
 
-Production consists of one Vercel project, one Turso database and one manual
-GitHub Actions workflow. No VM, reverse proxy or public API domain is required.
+Production consists of one Vercel project and one versioned Turso opening book.
+No VM, reverse proxy or public API domain is required.
 
-## 1. Prepare the existing SQLite database
+## 1. Build the production opening book
 
-Stop every local crawler and opening server, put the database at
-`data/openings_community.sqlite3`, then run:
+The crawler's `data/openings_community.sqlite3` file is the private archive; do
+not upload it. Stop the crawler, then build a fresh immutable production file:
 
 ```text
-python opening_prepare.py
-python -m unittest test_opening_database.py
+python opening_build.py --archive data/openings_community.sqlite3 --output data/openings_book.sqlite3
+python -m unittest test_opening_database.py test_opening_book.py
 ```
 
-The preparation command applies pending indexes and migrations, enables WAL,
-checkpoints it and validates Turso's upload requirements.
+The builder validates foreign keys, runs `ANALYZE` and `VACUUM`, and replaces
+only the generated output file.
 
 ## 2. Create the Turso database
 
@@ -22,40 +22,30 @@ Install the Turso CLI, authenticate, and upload the prepared file:
 
 ```text
 turso auth login
-turso db create intransitive-openings --from-file data/openings_community.sqlite3 --wait
-turso db show intransitive-openings --url
+turso db create intransitive-openings-YYYYMMDD --from-file data/openings_book.sqlite3 --wait
+turso db show intransitive-openings-YYYYMMDD --url
 ```
 
-The local file is below Turso's 2 GB CLI upload limit. Keep it as a backup until the
-remote database has been verified.
+Keep the generated file until the remote database has been verified. Use a new,
+versioned database for each release, then switch Vercel to it; this makes rollback
+an environment-variable change.
 
 ## 3. Create isolated credentials
 
 Create a read-only token for Vercel:
 
 ```text
-turso db tokens create intransitive-openings --read-only --expiration never
+turso db tokens create intransitive-openings-YYYYMMDD --read-only --expiration never
 ```
 
-Create a separate full-access token for the crawler:
-
-```text
-turso db tokens create intransitive-openings --expiration never
-```
-
-Store each printed token immediately. Do not put either token in `config.js`, Git,
+Store the printed token immediately. Do not put it in `config.js`, Git,
 logs, screenshots or browser code.
 
-## 4. Configure GitHub Actions
+## 4. Collect archive updates
 
-In the GitHub repository, create Actions secrets:
-
-- `TURSO_DATABASE_URL`: URL printed by `turso db show`.
-- `TURSO_WRITE_TOKEN`: full-access crawler token.
-
-The workflow `.github/workflows/openings-crawler.yml` only runs when started with
-GitHub's `Run workflow` button. It first checks existing game IDs in one query per
-page, avoiding repeated game-history downloads.
+The crawler must write to a persistent archive location, not the Turso production
+book. Run a book build and this deployment flow deliberately after new archive
+data is collected.
 
 ## 5. Configure and deploy Vercel
 
@@ -66,7 +56,7 @@ declares `api.index:handler` as the single Python entrypoint.
 Create these Vercel environment variables for Production, Preview and Development:
 
 - `TURSO_DATABASE_URL`: the same database URL.
-- `TURSO_AUTH_TOKEN`: the read-only token, never the crawler token.
+- `TURSO_AUTH_TOKEN`: the read-only token for the selected book.
 
 Leave `window.OPENINGS_API_BASE` empty in `web/config.js`; the browser calls the API
 on the same Vercel origin. Deploy, then verify:
@@ -76,14 +66,14 @@ https://YOUR-PROJECT.vercel.app/api/health
 https://YOUR-PROJECT.vercel.app/api/summary
 ```
 
-Finally open the project root and apply several filters. The Config loading indicator
-must remain visible until the API response completes.
+Finally open the project root and navigate several continuations. The move list,
+WDL bars, board state, and variation history should all update normally.
 
 ## 6. Operations
 
-Run the crawler manually from GitHub Actions after the first deploy. Monitor Turso's
-rows-read and rows-written metrics: aggregate queries count every examined row. The
-API sends CDN cache headers for 60-second shared caching to reduce repeated reads.
+Monitor Turso rows-read metrics after deployment. Normal navigation performs one
+primary-key position lookup and one indexed outgoing-move lookup; it never scans
+games or individual move occurrences.
 
-To rotate credentials, create a replacement token, update the matching secret, deploy
-or rerun the workflow, and then revoke the old token.
+To rotate credentials, create a replacement token, update the matching Vercel
+variable, deploy, and then revoke the old token.

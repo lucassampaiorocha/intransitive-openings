@@ -18,25 +18,23 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from opening_api import execute_request
-from opening_database import OpeningDatabase
+from opening_book import OpeningBookDatabase
 
 
 ROOT = Path(__file__).parent
 WEB_ROOT = ROOT / "web"
-LOCAL_DATABASE = ROOT / "data" / "openings_community.sqlite3"
-LEGACY_DATABASE = ROOT.parent.parent / "openings_community.sqlite3"
+LOCAL_DATABASE = ROOT / "data" / "openings_book.sqlite3"
 
 
 def default_database_path() -> Path:
-    configured = os.environ.get("OPENINGS_DATABASE")
+    configured = os.environ.get("OPENINGS_BOOK_DATABASE") or os.environ.get("OPENINGS_DATABASE")
     if configured:
         return Path(configured)
-    # Temporary compatibility while a running local crawler keeps the old file locked.
-    return LOCAL_DATABASE if LOCAL_DATABASE.exists() or not LEGACY_DATABASE.exists() else LEGACY_DATABASE
+    return LOCAL_DATABASE
 
 
 class OpeningHandler(SimpleHTTPRequestHandler):
-    database: OpeningDatabase
+    database: OpeningBookDatabase
     database_lock: threading.Lock
     api_cache: OrderedDict[str, tuple[float, bytes]]
     cors_origin: str
@@ -105,17 +103,15 @@ class OpeningHandler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Banco local de aberturas RPS2")
-    parser.add_argument("--database", default=str(default_database_path()), help="arquivo SQLite")
+    parser = argparse.ArgumentParser(description="Servidor local do livro de aberturas RPS2")
+    parser.add_argument("--database", default=str(default_database_path()), help="arquivo SQLite gerado por opening_build.py")
     parser.add_argument("--host", default="127.0.0.1", help="endereço de escuta")
     parser.add_argument("--port", type=int, default=8877, help="porta HTTP")
     parser.add_argument("--cors-origin", default="*", help="origem CORS do front publicado; * permite qualquer origem")
     args = parser.parse_args()
 
     database_path = Path(args.database).resolve()
-    if not os.environ.get("TURSO_DATABASE_URL"):
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-    OpeningHandler.database = OpeningDatabase.from_environment(database_path)
+    OpeningHandler.database = OpeningBookDatabase.from_environment(database_path)
     OpeningHandler.database_lock = threading.Lock()
     OpeningHandler.api_cache = OrderedDict()
     OpeningHandler.cors_origin = args.cors_origin
