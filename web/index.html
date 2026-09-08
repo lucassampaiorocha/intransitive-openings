@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intransitive Openings</title>
+  <link rel="stylesheet" href="style.css?v=9">
+</head>
+<body>
+  <header>
+    <h1>Intransitive Openings</h1>
+    <div id="summary" class="summary"></div>
+  </header>
+  <main>
+    <section id="explorer" class="tab-panel">
+      <section class="layout">
+        <article class="card">
+          <div class="section-heading"><div class="position-info"><h2 id="position-title">Starting positions</h2><span id="turn" class="muted"></span></div><div class="board-controls"><button id="flip" title="Flip board">Flip board</button><button id="back" hidden>Back</button></div></div>
+          <div class="board-frame"><div id="rank-labels" class="rank-labels" aria-hidden="true"></div><div id="board" class="board" aria-label="Board"></div><div id="file-labels" class="file-labels" aria-hidden="true"></div></div>
+        </article>
+        <aside class="side-column">
+          <section class="card config-panel">
+            <div class="config-heading">
+              <h2>Config</h2>
+              <span id="config-loading" class="config-loading" role="status" aria-live="polite" hidden><i aria-hidden="true"></i><span>Loading</span></span>
+            </div>
+            <form id="player-filter" class="player-filter" autocomplete="off">
+              <input id="player" placeholder="All players" aria-label="Player nickname">
+              <select id="color" aria-label="Player color"><option value="">Any color</option><option value="blue">Blue</option><option value="red">Red</option></select>
+              <select id="game-type" aria-label="Game type"><option value="" selected>Rated and casual</option><option value="rated">Rated</option><option value="casual">Casual</option></select>
+              <input id="date-from" type="text" inputmode="numeric" maxlength="10" placeholder="From dd/mm/yyyy" aria-label="From date in dd/mm/yyyy format">
+              <input id="date-to" type="text" inputmode="numeric" maxlength="10" placeholder="To dd/mm/yyyy" aria-label="To date in dd/mm/yyyy format">
+              <div class="rating-options" role="group" aria-label="Average rating range">
+                <button type="button" class="rating-option" data-band="under1200" aria-pressed="true">1199-</button>
+                <button type="button" class="rating-option" data-band="1200-1299" aria-pressed="true">1200-1299</button>
+                <button type="button" class="rating-option" data-band="1300-1399" aria-pressed="true">1300-1399</button>
+                <button type="button" class="rating-option" data-band="1400-1499" aria-pressed="true">1400-1499</button>
+                <button type="button" class="rating-option" data-band="1500plus" aria-pressed="true">1500+</button>
+              </div>
+              <button>Apply</button><button id="clear-filter" type="button" hidden>Clear</button>
+            </form>
+          </section>
+          <article class="card explorer">
+            <h2>Moves</h2>
+            <div id="moves" class="moves"></div>
+          </article>
+          <article class="card variation">
+            <h2>Current Variation</h2>
+            <div id="variation-list" class="variation-list"></div>
+          </article>
+        </aside>
+      </section>
+    </section>
+  </main>
+  <script src="config.js?v=9"></script>
+  <script src="app.js?v=9"></script>
+</body>
+</html>

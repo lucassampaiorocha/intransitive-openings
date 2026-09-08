@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "web",
+  "functions": {
+    "api/**/*.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{data/**,test_*.py,web/**,**/__pycache__/**,**/*.sqlite3*}"
+    }
+  }
+}
