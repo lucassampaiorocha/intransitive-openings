@@ -11,7 +11,7 @@ const assetBase = (window.OPENINGS_ASSET_BASE || '').replace(/\/$/, '');
 const requestCache = new Map();
 const path = [];
 const variation = [];
-let current = null, flipped = false, displayedBoard = null;
+let current = null, flipped = false, displayedBoard = null, currentMoves = [], selectedSource = null;
 const name = { 1: 'rock', 2: 'paper', 3: 'scissors' };
 const icon = { 1: 'rock', 2: 'paper', 3: 'scissors' };
 
@@ -46,7 +46,10 @@ function renderBoard(board) {
   fileLabels.innerHTML = files.map(file => `<span>${String.fromCharCode(65 + file)}</span>`).join('');
   for (const rank of ranks) for (const file of files) {
     const index = rank * 9 + file, value = board[index], square = document.createElement('div');
+    const squareName = `${String.fromCharCode(65 + file)}${rank + 1}`;
     square.className = `square ${(rank + file) % 2 ? 'dark' : 'light'}${index === 0 ? ' goal-red' : ''}${index === 80 ? ' goal-blue' : ''}`;
+    square.dataset.square = squareName;
+    square.onclick = () => selectBoardSquare(squareName);
     if (value) {
       const piece = document.createElement('img'); piece.className = `piece-icon ${value > 0 ? 'blue' : 'red'}`;
       piece.src = assetUrl(`/assets/${icon[Math.abs(value)]}.svg`); piece.alt = `${value > 0 ? 'Blue' : 'Red'} ${name[Math.abs(value)]}`;
@@ -54,6 +57,27 @@ function renderBoard(board) {
     }
     boardElement.append(square);
   }
+  updateBoardMoveHints();
+}
+function updateBoardMoveHints() {
+  const sources = new Set(currentMoves.map(move => move.source));
+  const targets = new Set(selectedSource ? currentMoves.filter(move => move.source === selectedSource).map(move => move.target) : []);
+  boardElement.querySelectorAll('.square').forEach(square => {
+    const name = square.dataset.square;
+    square.classList.toggle('move-source', sources.has(name));
+    square.classList.toggle('move-selected', name === selectedSource);
+    square.classList.toggle('move-target', targets.has(name));
+  });
+}
+function selectBoardSquare(square) {
+  const nextMove = selectedSource && currentMoves.find(move => move.source === selectedSource && move.target === square);
+  if (nextMove) {
+    selectedSource = null;
+    navigateToMove(nextMove);
+    return;
+  }
+  selectedSource = currentMoves.some(move => move.source === square) ? square : null;
+  updateBoardMoveHints();
 }
 function clearMoveArrow() { boardElement.querySelector('.move-arrow')?.remove(); }
 function drawMoveArrow(move) {
@@ -85,6 +109,7 @@ function applyMove(board, move) {
   next[target] = next[source]; next[source] = 0; return next;
 }
 function navigateToMove(move) {
+  currentMoves = []; selectedSource = null;
   path.push(current); variation.push(move); if (displayedBoard) renderBoard(applyMove(displayedBoard, move));
   renderVariation(); document.querySelector('#turn').textContent = 'Loading position...'; movesElement.textContent = 'Loading...';
   loadOpening(move.next).catch(() => { movesElement.textContent = 'Could not load this position.'; });
@@ -103,13 +128,14 @@ function renderVariation() {
 }
 async function loadOpening(position) {
   current = position; const data = await request(`/api/opening?position=${encodeURIComponent(position)}`);
-  renderBoard(data.board);
+  currentMoves = data.moves; selectedSource = null; renderBoard(data.board);
   document.querySelector('#position-title').textContent = `${data.total} games`;
   document.querySelector('#turn').textContent = `${data.side === 1 ? 'Blue' : 'Red'} to move · ${formatRating(data.ratings)}`;
   renderMoves(data); renderVariation(); backButton.hidden = !path.length; prefetchMoves(data.moves);
 }
 async function loadRoots(data = null) {
   data ||= await request('/api/roots');
+  currentMoves = []; selectedSource = null;
   document.querySelector('#position-title').textContent = 'Starting positions'; document.querySelector('#turn').textContent = ''; movesElement.innerHTML = '';
   if (data.roots.length) renderBoard(data.roots[0].board); else boardElement.innerHTML = '';
   data.roots.forEach(root => {

@@ -13,8 +13,8 @@ python opening_build.py --archive data/openings_community.sqlite3 --output data/
 python -m unittest test_opening_database.py test_opening_book.py
 ```
 
-The builder validates foreign keys, runs `ANALYZE` and `VACUUM`, and replaces
-only the generated output file.
+The builder validates foreign keys, runs `ANALYZE` and `VACUUM`, and finishes
+with `journal_mode=WAL`, which Turso requires for `--from-file` uploads.
 
 ## 2. Create the Turso database
 
